@@ -1,0 +1,26 @@
+﻿@inject NavigationManager navigationManager;
+<SfMessage Severity="MessageSeverity.Info" Visible="Visibility" ShowIcon="true" ShowCloseIcon="true">@Message</SfMessage>
+<style>
+    .e-message {
+        width: 300px;
+    }
+</style>
+
+@code {
+    [Parameter] public bool Visibility { get; set; }
+    [Parameter] public string Message { get; set; } = string.Empty;
+    [Parameter] public string NavigateTo { get; set; } = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Visibility)
+        {
+            await Task.Delay(2000);
+            Visibility = false;
+            if (NavigateTo != "")
+                navigationManager.NavigateTo($"{@NavigateTo}", true);
+        }
+    }
+
+
+}

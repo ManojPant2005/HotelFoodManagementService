@@ -6,4 +6,21 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.16" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Syncfusion.Blazor.Calendars" Version="25.1.35" />
+    <PackageReference Include="Syncfusion.Blazor.DropDowns" Version="25.1.35" />
+    <PackageReference Include="Syncfusion.Blazor.Grid" Version="25.1.35" />
+    <PackageReference Include="Syncfusion.Blazor.Inputs" Version="25.1.35" />
+    <PackageReference Include="Syncfusion.Blazor.Navigations" Version="25.1.35" />
+    <PackageReference Include="Syncfusion.Blazor.Popups" Version="25.1.35" />
+    <PackageReference Include="Syncfusion.Blazor.Themes" Version="25.1.35" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,125 @@
+﻿@page "/recipes"
+@inject IRecipeService recipeService
+@inject ICategoryService categoryService
+@inject IProcedureService prodedureService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header h5 text-light fw-bold bg-primary">
+                <i class="oi oi-briefcase"></i>
+                Food Recipes Hub
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(CurrrentSelectionValue) || !string.IsNullOrWhiteSpace(CurrrentSelectionValue))
+                {
+                    <SfDropDownList TValue="string" TItem="CategoryModel" Placeholder="@CurrrentSelectionValue" DataSource="@Categories">
+                        <DropDownListFieldSettings Value="Id" Text="CountryName"></DropDownListFieldSettings>
+                        <DropDownListEvents TValue="string" TItem="CategoryModel" ValueChange="OnValueChange"></DropDownListEvents>
+                    </SfDropDownList>
+                }
+                else
+                {
+                    <SfDropDownList TValue="string" TItem="CategoryModel" Placeholder="Select Recipe Origin" DataSource="@Categories">
+                        <DropDownListFieldSettings Value="Id" Text="CountryName"></DropDownListFieldSettings>
+                        <DropDownListEvents TValue="string" TItem="CategoryModel" ValueChange="OnValueChange"></DropDownListEvents>
+                    </SfDropDownList>
+                }
+
+                <hr />
+                <SfGrid DataSource="@Recipies" Toolbar="@(new List<string>() {"Add","Edit","Update","Delete","Cancel","Search"})" AllowSelection="true" @ref="Grid">
+                    <GridEvents OnBeginEdit="BeginEditHandler" OnActionBegin="ActionBeginHandler" TValue="RecipeModel"></GridEvents>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+                    <GridColumns>
+                        <GridColumn Field=@nameof(RecipeModel.Id) IsPrimaryKey="true" HeaderText="Recipe Id" TextAlign="TextAlign.Center" Width="100"></GridColumn>
+                        <GridColumn HeaderText="Recipe Image" TextAlign="TextAlign.Center" Width="120">
+                            <Template>
+                                @{
+                                    var recipe = (context as RecipeModel);
+                                    <div class="image">
+                                        <img src="@recipe.GeneralImage" alt="@recipe.GeneralImage" width="100" height="100" />
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(RecipeModel.RecipeName) HeaderText="Recipe Name" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(RecipeModel.Rank) HeaderText="Recipe Rank" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(RecipeModel.GeneralTimeNeeded) HeaderText="Duration" TextAlign="TextAlign.Center" Format="HH:mm" Type="ColumnType.TimeOnly" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(RecipeModel.Description) HeaderText="Recipe Description" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    SfGrid<RecipeModel> Grid;
+    public List<CategoryModel> Categories = new();
+    public List<RecipeModel> Recipies = new();
+
+    public static int CurrrentSelectionId = 0;
+    public static string CurrrentSelectionValue = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        if (CurrrentSelectionId > 0)
+        {
+            Recipies = await recipeService.GetRecipeByCategoryIdAsync(CurrrentSelectionId);
+        }
+        else
+        {
+            Recipies = await recipeService.GetRecipesAsync();
+            CurrrentSelectionValue = string.Empty;
+        }
+        Categories = await categoryService.GetCategoriesAsync();
+    }
+
+
+
+    // Get Selected value from Dropdown
+    public async void OnValueChange(ChangeEventArgs<string, CategoryModel> args)
+    {
+        if (int.Parse(args.Value) > 0)
+        {
+            Recipies = await recipeService.GetRecipeByCategoryIdAsync(int.Parse(args.Value));
+            CurrrentSelectionId = int.Parse(args.Value);
+            CurrrentSelectionValue = args.ItemData.CountryName;
+        }
+    }
+
+    //When toolbar item is clicked
+    public async Task ActionBeginHandler(ActionEventArgs<RecipeModel> Args)
+    {
+        try
+        {
+            if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+            {
+                navigationManager.NavigateTo("/recipe");
+            }
+        }
+        catch (Exception) { }
+
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            bool confirm = await js.InvokeAsync<bool>("window.confirm", "Are you sure you want to really delete?");
+            if (confirm)
+            {
+                await recipeService.DeleteRecipeAsync(Args.RowData.Id);
+                Recipies = (await recipeService.GetRecipesAsync()).ToList();
+                await Grid.Refresh();
+            }
+        }
+    }
+
+    public void BeginEditHandler(BeginEditArgs<RecipeModel> args) => navigationManager.NavigateTo($"/recipe/{args.RowData.Id}", true);
+}

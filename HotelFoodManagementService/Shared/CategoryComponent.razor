@@ -1,0 +1,149 @@
+﻿@page "/category"
+@page "/category/{Id:int}"
+
+@inject ICategoryService categoryService
+@inject NavigationManager navigationManager
+
+<SfDialog Width="600px" ShowCloseIcon="false" AllowPrerender="true" IsModal="true" style="border:3px solid #0d6efd">
+    <DialogTemplates>
+        <Content>
+            <MessageComponent Message="@Message" Visibility="@Visibility" NavigateTo="@NavigateTo"></MessageComponent>
+            <EditForm Model="CategoryObject" OnValidSubmit="CreateCategory">
+                <div class="card">
+                    <div class="card-header fw-bold h5 text-light bg-primary"><i class="oi oi-globe "></i> @Title</div>
+                    <div class="card-body">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="form-control">
+                            <SfTextBox Placeholder='Country Name' @bind-Value="CategoryObject.CountryName" FloatLabelType='@FloatLabelType.Auto'></SfTextBox>
+                            <ValidationMessage For="(()=> CategoryObject.CountryName)" />
+                        </div>
+                        <div class="form-control">
+                            <SfUploader AutoUpload="true" AllowMultiple=false AllowedExtensions=".png, .PNG, .JPEG, .jpeg, .JPG, .jpg">
+                                <UploaderEvents ValueChange="OnChange"></UploaderEvents>
+                            </SfUploader>
+                        </div>
+                        <div>
+                            <table>
+                                <tr>
+                                    <td>
+                                        @if (Id > 0)
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"> <i class="oi oi-loop-circular"></i> Update Procedure</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"><i class="oi oi-plus"></i> Add Procedure</button>
+                                        }
+                                    </td>
+                                    <td><button type="button" class="btn btn-warning  m-3" @onclick="Cancel"><i class="oi oi-circle-x"></i> Cancel</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter] public int Id { get; set; }
+    public bool Visibility { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string NavigateTo { get; set; } = string.Empty;
+
+    CategoryModel CategoryObject = new();
+    public string Title { get; set; } = string.Empty;
+
+    async Task CreateCategory()
+    {
+        if (CategoryObject is null) return;
+        var result = await categoryService.AddOrUpdateCategoryAsync(CategoryObject);
+
+        switch (result)
+        {
+            case 200:
+                Message = "Successfully Updated";
+                Visibility = true;
+                NavigateTo = "/categories";
+                break;
+
+            case 201:
+                Message = "Successfully Created";
+                Visibility = true;
+                NavigateTo = "/categories";
+                break;
+
+            case 400:
+                Message = "All fields required";
+                Visibility = true;
+                NavigateTo = "/category";
+                break;
+
+            case 404:
+                Message = "Category not found";
+                NavigateTo = "/category";
+                Visibility = true;
+                break;
+
+            case 406:
+                Message = "Country already added";
+                NavigateTo = "/category";
+                Visibility = true;
+                break;
+
+            case 501:
+                Message = "Sorry No change was made";
+                NavigateTo = "/categories";
+                Visibility = true;
+                break;
+        }
+    }
+
+    public void Cancel()
+    {
+        navigationManager.NavigateTo("/categories");
+    }
+
+    private async void OnChange(UploadChangeEventArgs args)
+    {
+        foreach (var file in args.Files)
+        {
+            string format = string.Empty;
+            if (file.FileInfo.Name.ToLower().Contains("png"))
+                format = "image/png";
+
+            if (file.FileInfo.Name.ToLower().Contains("jpg"))
+                format = "image/jpg";
+
+            if (file.FileInfo.Name.ToLower().Contains("jpeg"))
+                format = "image/jpeg";
+
+            var selectedFile = file.File;
+            var resizeImage = await selectedFile.RequestImageFileAsync(format, 300, 300);
+            var buffer = new byte[resizeImage.Size];
+            await resizeImage.OpenReadStream().ReadAsync(buffer);
+            CategoryObject.Image = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Title = "Add Recipe Origin";
+        base.OnInitialized();
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            CategoryObject = await categoryService.GetCategoryByIdAsync(Id);
+            Title = "Update Recipe Origin";
+            return;
+        }
+        Title = "Add Recipe Origin";
+
+    }
+
+}

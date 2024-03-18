@@ -1,0 +1,76 @@
+﻿@page "/categories"
+@inject IRecipeService recipeService
+@inject ICategoryService categoryService
+@inject IProcedureService prodedureService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-light fw-bold h5">
+                <i class="oi oi-globe"></i> Manage Recipe Origins
+            </div>
+            <div class="card-body">
+                <SfGrid DataSource="@categoryModels" Toolbar="@(new List<string>() {"Add","Edit","Update","Delete","Cancel","Search"})" AllowSelection="true" @ref="Grid">
+                    <GridEvents OnBeginEdit="BeginEditHandler" OnActionBegin="ActionBeginHandler" TValue="CategoryModel"></GridEvents>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Normal"></GridEditSettings>
+                    <GridColumns>
+                        <GridColumn Field=@nameof(CategoryModel.Id) IsPrimaryKey="true" HeaderText="Category Id" TextAlign="TextAlign.Center" Width="100"></GridColumn>
+                        <GridColumn HeaderText="Country Image" TextAlign="TextAlign.Center" Width="120">
+                            <Template>
+                                @{
+                                    var country = (context as CategoryModel);
+                                    <div class="image">
+                                        <img src="@country!.Image" alt="@country.CountryName" width="150" height="100" />
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(CategoryModel.CountryName) HeaderText="Country Name" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .image img {
+        height: 55px;
+        width: 55px;
+        border-radius: 50px;
+        box-shadow: inset 0 0 1px #e0e0e0, inset 0 0 14px rgba(0, 0, 0, 0.2);
+    }
+</style>
+
+@code {
+    SfGrid<CategoryModel> Grid;
+    List<CategoryModel> categoryModels = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        categoryModels = await categoryService.GetCategoriesAsync();
+    }
+
+    //When toolbar item is clicked
+    public async Task ActionBeginHandler(ActionEventArgs<CategoryModel> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+            navigationManager.NavigateTo("/category");
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            bool confirm = await js.InvokeAsync<bool>("window.confirm", "Are you sure you want to really delete?");
+            if (confirm)
+            {
+                await categoryService.DeleteCategoryAsync(Args.RowData.Id);
+                categoryModels = (await categoryService.GetCategoriesAsync()).ToList();
+                await Grid.Refresh();
+            }
+        }
+    }
+
+    public void BeginEditHandler(BeginEditArgs<CategoryModel> args) => navigationManager.NavigateTo($"category/{args.RowData.Id}");
+}
+

@@ -1,0 +1,167 @@
+﻿@page "/procedure"
+@page "/procedure/{Id:int}"
+
+@inject IProcedureService prodedureService
+@inject NavigationManager navigationManager
+@inject IRecipeService ireciepeService
+<SfDialog Width="600px" ShowCloseIcon="false" AllowPrerender="true" IsModal="true" style="border:3px solid #0d6efd">
+    <DialogTemplates>
+        <Content>
+            <MessageComponent Message="@Message" Visibility="@Visibility" NavigateTo="@NavigateTo"></MessageComponent>
+            <EditForm Model="StepObject" OnValidSubmit="HandleOperation">
+                <div class="card">
+                    <div class="card-header fw-bold h5 text-light bg-primary"><i class="oi oi-layers"></i> @Title</div>
+                    <div class="card-body">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <div class="form-control">
+                            <SfTextBox Placeholder="Procedure Title" @bind-Value="StepObject.Title" FloatLabelType='@FloatLabelType.Auto'></SfTextBox>
+                            <ValidationMessage For="(()=> StepObject.Title)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            @if (StepObject.Id > 0)
+                            {
+                                string setValue = StepObject!.Recipe!.RecipeName;
+                                <SfDropDownList TValue="string" TItem="RecipeModel" Placeholder="@setValue" DataSource="@RecipeObjects">
+                                    <DropDownListFieldSettings Value="Id" Text="RecipeName"></DropDownListFieldSettings>
+                                    <DropDownListEvents TValue="string" TItem="RecipeModel" ValueChange="OnValueChange"></DropDownListEvents>
+                                </SfDropDownList>
+                            }
+                            else
+                            {
+                                <SfDropDownList TValue="string" TItem="RecipeModel" Placeholder="Select Recipe" DataSource="@RecipeObjects">
+                                    <DropDownListFieldSettings Value="Id" Text="RecipeName"></DropDownListFieldSettings>
+                                    <DropDownListEvents TValue="string" TItem="RecipeModel" ValueChange="OnValueChange"></DropDownListEvents>
+                                </SfDropDownList>
+                            }
+                            <ValidationMessage For="(()=> StepObject.RecipeId)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfTimePicker TValue="TimeOnly" @bind-Value="StepObject.TimeNeeded" Step="1" PlaceHolder="Select Duration" Format="HH:mm" AllowEdit="true" EnableMask="true" FloatLabelType="@FloatLabelType.Auto" ShowClearButton="true"></SfTimePicker>
+                            <ValidationMessage For="(()=> StepObject.TimeNeeded)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfNumericTextBox TValue="int" @bind-Value="StepObject.ProcedureNo" Min="0" FloatLabelType="@FloatLabelType.Auto" Placeholder="Select Procedure No."></SfNumericTextBox>
+                            <ValidationMessage For="(()=> StepObject.ProcedureNo)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfTextBox Placeholder="Procedure Decription" @bind-Value="StepObject.Description" FloatLabelType="@FloatLabelType.Auto" Multiline="true"></SfTextBox>
+                            <ValidationMessage For="(()=> StepObject.Description)" />
+                        </div>
+                        <div>
+                            <table>
+                                <tr>
+                                    <td>
+                                        @if (Id > 0)
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"> <i class="oi oi-loop-circular"></i> Update Procedure</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"><i class="oi oi-plus"></i> Add Procedure</button>
+                                        }
+                                    </td>
+                                    <td><button type="button" class="btn btn-warning  m-3" @onclick="Cancel"><i class="oi oi-circle-x"></i> Cancel</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter] public int Id { get; set; }
+
+    public bool Visibility { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string NavigateTo { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+
+    List<RecipeModel> RecipeObjects = new();
+    StepModels StepObject = new();
+
+    async Task HandleOperation()
+    {
+        if (StepObject is null) return;
+        var result = await prodedureService.AddOrUpdateStepAsync(StepObject);
+
+        switch (result)
+        {
+            case 200:
+                Message = "Successfully Updated";
+                Visibility = true;
+                NavigateTo = "/procedures";
+                break;
+
+            case 201:
+                Message = "Successfully Created";
+                Visibility = true;
+                NavigateTo = "/procedures";
+                break;
+
+            case 400:
+                Message = "All fields required";
+                Visibility = true;
+                NavigateTo = "/add-step";
+                break;
+
+            case 404:
+                Message = "Category not found";
+                NavigateTo = "/procedures";
+                Visibility = true;
+                break;
+
+            case 406:
+                Message = "Country already added";
+                NavigateTo = "/procedures";
+                Visibility = true;
+                break;
+
+            case 501:
+                Message = "Sorry No change was made";
+                NavigateTo = "/procedures";
+                Visibility = true;
+                break;
+        }
+    }
+
+
+    public void Cancel()
+    {
+        navigationManager.NavigateTo("/procedures");
+    }
+
+    protected async override Task OnInitializedAsync()
+    {
+        await LoadRecipes();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id <= 0)
+        {
+            Title = "Add Procedure";
+            return;
+        }
+
+        Title = "Update Procedure";
+        await LoadRecipes();
+        StepObject = await prodedureService.GetStepByIdAsync(Id);
+    }
+
+    public async Task LoadRecipes()
+    {
+        RecipeObjects = await ireciepeService.GetRecipesAsync();
+    }
+
+    // Get Selected value from Dropdown
+    public void OnValueChange(ChangeEventArgs<string, RecipeModel> args)
+    {
+        StepObject.RecipeId = int.Parse(args.Value);
+    }
+
+}

@@ -1,0 +1,215 @@
+﻿@page "/recipe"
+@page "/recipe/{Id:int}"
+
+@inject IRecipeService recipeService
+@inject ICategoryService categoryService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+<SfDialog Width="800px" ShowCloseIcon="false" AllowPrerender="true" IsModal="true" style="border:3px solid #0d6efd">
+    <DialogTemplates>
+        <Content>
+            <MessageComponent Message="@Message" Visibility="@Visibility" NavigateTo="@NavigateTo"></MessageComponent>
+            <EditForm Model="recipeModel" OnValidSubmit="SaveRecipe">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header fw-bold h5 text-light bg-primary"><i class="oi oi-briefcase"></i> @Title</div>
+                        <DataAnnotationsValidator></DataAnnotationsValidator>
+                        <ValidationSummary></ValidationSummary>
+                        <div class="form-control mt-2">
+                            <SfTextBox Placeholder="Recipe Name" @bind-Value="recipeModel.RecipeName" FloatLabelType="@FloatLabelType.Auto"></SfTextBox>
+                            <ValidationMessage For="(()=> recipeModel.RecipeName)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            @if (recipeModel.Id > 0)
+                            {
+                                string setValue = recipeModel!.Category!.CountryName;
+                                <SfDropDownList TValue="string" TItem="CategoryModel" Placeholder="@setValue" DataSource="@Categories">
+                                    <DropDownListFieldSettings Value="Id" Text="CountryName"></DropDownListFieldSettings>
+                                    <DropDownListEvents TValue="string" TItem="CategoryModel" ValueChange="OnValueChange"></DropDownListEvents>
+                                </SfDropDownList>
+                            }
+                            else
+                            {
+                                <SfDropDownList TValue="string" TItem="CategoryModel" Placeholder="Select Origin" DataSource="@Categories">
+                                    <DropDownListFieldSettings Value="Id" Text="CountryName"></DropDownListFieldSettings>
+                                    <DropDownListEvents TValue="string" TItem="CategoryModel" ValueChange="OnValueChange"></DropDownListEvents>
+                                </SfDropDownList>
+                            }
+                            <ValidationMessage For="(()=> recipeModel.CategoryId)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfNumericTextBox TValue="int" @bind-Value="recipeModel.Rank" Min="0" FloatLabelType="@FloatLabelType.Auto" Placeholder="Select Rank (Optional)"></SfNumericTextBox>
+                            <ValidationMessage For="(()=> recipeModel.Rank)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfTextBox Placeholder="Recipe Decription" @bind-Value="recipeModel.Description" FloatLabelType="@FloatLabelType.Auto" Multiline="true"></SfTextBox>
+                            <ValidationMessage For="(()=> recipeModel.Description)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfTimePicker TValue="TimeOnly" @bind-Value="recipeModel.GeneralTimeNeeded" PlaceHolder="Select Duration" Step="1" Format="HH:mm" AllowEdit="true" EnableMask="true" FloatLabelType="@FloatLabelType.Auto" ShowClearButton="true"></SfTimePicker>
+                            <ValidationMessage For="(()=> recipeModel.GeneralTimeNeeded)" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfUploader AutoUpload="true" AllowMultiple=false AllowedExtensions=".png, .PNG, .JPEG, .jpeg, .JPG, .jpg" MinFileSize=10000 MaxFileSize=1000000>
+                                <UploaderEvents ValueChange="OnChange"></UploaderEvents>
+                            </SfUploader>
+                            <ValidationMessage For="(()=> recipeModel.GeneralImage)" />
+                        </div>
+                        <div>
+                            <table>
+                                <tr>
+                                    <td>
+                                        @if (Id > 0)
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"> <i class="oi oi-loop-circular"></i> Update Procedure</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"><i class="oi oi-plus"></i> Add Procedure</button>
+                                        }
+                                    </td>
+                                    <td><button type="button" class="btn btn-warning  m-3" @onclick="Cancel"><i class="oi oi-circle-x"></i> Cancel</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter] public int Id { get; set; }
+
+    public bool Visibility { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string NavigateTo { get; set; } = string.Empty;
+
+    public RecipeModel recipeModel = new();
+    public List<CategoryModel> Categories = new();
+
+    public string Title { get; set; } = string.Empty;
+
+    protected async override Task OnInitializedAsync()
+    {
+        Categories = await categoryService.GetCategoriesAsync();
+        Title = "Add Food Recipe";
+    }
+    private async Task SaveRecipe()
+    {
+        if (recipeModel.CategoryId < 0)
+        {
+            Message = "Please Choose Recipe Origin";
+            Visibility = true;
+            return;
+        }
+
+        if (recipeModel.GeneralTimeNeeded == TimeOnly.MinValue)
+        {
+            Message = "Select Recipe Duration";
+            Visibility = true;
+            return;
+        }
+
+        var result = await recipeService.AddOrUpdateRecipeAsync(recipeModel);
+        switch (result)
+        {
+            case 200:
+                Message = "Successfully Updated";
+                Visibility = true;
+                NavigateTo = "/recipes";
+                break;
+
+            case 201:
+                Message = "Successfully Created";
+                Visibility = true;
+                NavigateTo = "/recipes";
+                break;
+
+            case 400:
+                Message = "All fields required";
+                Visibility = true;
+                break;
+
+            case 404:
+                Message = "Recipe not found";
+                NavigateTo = "/recipes";
+                Visibility = true;
+                break;
+
+            case 406:
+                Message = "Recipe already added";
+                NavigateTo = "/recipes";
+                Visibility = true;
+                break;
+        }
+    }
+
+    private async void OnChange(UploadChangeEventArgs args)
+    {
+        try
+        {
+            foreach (var file in args.Files)
+            {
+                string format = string.Empty;
+                if (file.FileInfo.Name.ToLower().Contains("png"))
+                    format = "image/png";
+
+                if (file.FileInfo.Name.ToLower().Contains("jpg"))
+                    format = "image/jpg";
+
+                if (file.FileInfo.Name.ToLower().Contains("jpeg"))
+                    format = "image/jpeg";
+
+                var selectedFile = file.File;
+
+                await using MemoryStream fs = new MemoryStream();
+                await file.File.OpenReadStream(maxAllowedSize: 1048576).CopyToAsync(fs);
+                byte[] somBytes = GetBytes(fs);
+                string imageData = $"data:{format};base64,{Convert.ToBase64String(somBytes, 0, somBytes.Length)}";
+                recipeModel.GeneralImage = imageData;
+            }
+        }
+        catch (Exception ex)
+        {
+            await js.InvokeVoidAsync("alert", ex.Message);
+        }
+    }
+
+
+    public static byte[] GetBytes(Stream stream)
+    {
+        var bytes = new byte[stream.Length];
+        stream.Seek(0, SeekOrigin.Begin);
+        stream.ReadAsync(bytes, 0, bytes.Length);
+        stream.Dispose();
+        return bytes;
+    }
+
+
+
+    // Get Selected value from Dropdown
+    public void OnValueChange(ChangeEventArgs<string, CategoryModel> args)
+    {
+        recipeModel.CategoryId = int.Parse(args.Value);
+    }
+
+    public void Cancel()
+    {
+        navigationManager.NavigateTo("/recipes");
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            recipeModel = await recipeService.GetRecipeByIdAsync(Id);
+            Title = "Update Food Recipe";
+            return;
+        }
+        Title = "Add Food Recipe";
+    }
+}

@@ -1,0 +1,87 @@
+﻿@page "/procedures"
+@inject IRecipeService recipeService
+@inject ICategoryService categoryService
+@inject IProcedureService prodedureService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header fw-bold h5 text-light bg-primary">
+                <i class="oi oi-vertical-align-bottom"></i> Manage Recipes' Procedures
+            </div>
+            <div class="card-body">
+                <SfGrid DataSource="@StepObjects" Toolbar="@(new List<string>() {"Add","Edit","Update","Delete","Cancel","Search"})" AllowSelection="true" @ref="Grid">
+                    <GridEvents OnBeginEdit="BeginEditHandler" OnActionBegin="ActionBeginHandler" TValue="StepModels"></GridEvents>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true"></GridEditSettings>
+                    <GridColumns>
+                        <GridColumn Field=@nameof(StepModels.Id) IsPrimaryKey="true" HeaderText="Procedure Id" TextAlign="TextAlign.Center" Width="100"></GridColumn>
+                        <GridColumn Field=@nameof(StepModels.Title) HeaderText="Step Title" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(StepModels.ProcedureNo) HeaderText="Step No." TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(StepModels.RecipeId) HeaderText="Recipe Name" TextAlign="TextAlign.Center" Width="120">
+                            <Template>
+                                <span>
+                                    @{
+                                        var m = @context as StepModels;
+                                    }
+                                    @GetName(m.RecipeId)
+                                </span>
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(StepModels.TimeNeeded) Type="ColumnType.TimeOnly" HeaderText="Duration" Format="HH:mm" TextAlign="TextAlign.Center" Width="100"></GridColumn>
+                        <GridColumn Field=@nameof(StepModels.Description) HeaderText="Description" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    SfGrid<StepModels> Grid;
+    List<StepModels> StepObjects = new();
+    List<RecipeModel> RecipeObjects = new();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProcedures();
+    }
+
+    private async Task LoadProcedures()
+    {
+        StepObjects = await prodedureService.GetStepsAsync();
+        RecipeObjects = await recipeService.GetRecipesAsync();
+    }
+
+    //When toolbar item is clicked
+    public async Task ActionBeginHandler(ActionEventArgs<StepModels> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+            navigationManager.NavigateTo("/procedure");
+
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            bool confirm = await js.InvokeAsync<bool>("window.confirm", "Are you sure you want to really delete?");
+            if (confirm)
+            {
+                await prodedureService.DeleteStepAsync(Args.RowData.Id);
+                await LoadProcedures();
+                await Grid.Refresh();
+            }
+        }
+    }
+
+    public void BeginEditHandler(BeginEditArgs<StepModels> args) => navigationManager.NavigateTo($"procedure/{args.RowData.Id}");
+
+    public string GetName(int id)
+    {
+        if (id > 0)
+        {
+            var t = RecipeObjects.Where(_ => _.Id == id).FirstOrDefault().RecipeName;
+            return t;
+        }
+        return null!;
+
+    }
+}

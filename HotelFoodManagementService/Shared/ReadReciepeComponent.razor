@@ -1,0 +1,59 @@
+﻿@page "/readrecipe/{Id:int}"
+@inject IRecipeService recipeService
+
+
+<div class="col-md-8 offset-2">
+    <div class="card">
+        <div class="card-header fw-bold h5 text-light bg-primary">@recipeModel.RecipeName</div>
+        <div class="card-body">
+            <img class="card-img-top text-center" src="@recipeModel.GeneralImage" width="400" height="400" />
+            <table class="table table-active">
+                <tbody>
+                    <tr>
+                        <td>Description:</td>
+                        <td>@recipeModel.Description</td>
+                    </tr>
+                    <tr>
+                        <td>Country of Origin:</td>
+                        <td> <img src="@recipeModel.Category.Image" width="40" height="40" /> | @recipeModel.Category.CountryName</td>
+                    </tr>
+                    <tr>
+                        <td>Recipe Rank:</td>
+                        <td>@recipeModel.Rank</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">Procedures</td>
+                    </tr>
+                    @foreach (var i in recipeModel.Procedures)
+                    {
+                        <tr>
+                            <td>Step @i.ProcedureNo</td>
+                            <td>@i.Description</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer">
+            <ul class="list-group list-group-horizontal-sm text-center" style="list-style:none;">
+                <li class="list-group-item-action"><i class="oi oi-thumb-up"></i></li>
+                <li class="list-group-item-action"><i class="oi oi-share-boxed text-primary"></i></li>
+                <li class="list-group-item-action"><i class="oi oi-arrow-circle-bottom"></i></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    [Parameter] public int Id { get; set; }
+    public RecipeModel recipeModel { get; set; } = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id <= 0) return;
+
+        recipeModel = await recipeService.GetRecipeByIdAsync(Id);
+    }
+}
