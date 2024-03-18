@@ -26,8 +26,6 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 var app = builder.Build();
 
-Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(licenseKey: "Ngo9BigBOggjHTQxAR8/V1NBaF5cXmZCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdnWXxfeHRUR2ZeV0N+XUs=");
-
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
